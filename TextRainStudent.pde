@@ -11,7 +11,9 @@ Capture cam;
 Movie mov;
 PImage inputImage;
 boolean inputMethodSelected = false;
-
+int floor(double d) {
+  return (int) Math.floor(d);
+}
 
 void setup() {
   size(1280, 720);  
@@ -54,33 +56,77 @@ class Clock {
   }
 }
 
+class ScreenCoord {
+  float x,y;
+  ScreenCoord(float x, float y) {
+    this.x = x;
+    this.y = y;
+  }
+  boolean isVisible() {
+    return x < width && x >= 0
+      && y < height && y >= 0;
+  }
+  int toPixel() {
+    return floor(y)*height + floor(x);
+  }
+}
+class WorldCoord {
+  float x,y;
+  WorldCoord(float x, float y) {
+    this.x = x;
+    this.y = y;
+  }
+  ScreenCoord toScreenCoord() {
+    return new ScreenCoord(x * width,y * height);
+  }
+}
+
+
+
+
 class Character {
-   float x,y;
+   public static final int TEXT_HEIGHT = 20;
+   public static final float ESCAPE_VEL = .001;
+   WorldCoord coord;
    float speed = 20; // pixels per second
    char c;
    Character(char c, float x,float y) {
      this.c = c;
-     this.x = x;
-     this.y = y;
+     this.coord = new WorldCoord(x,y);
    }
    void render() {
-      text(c,x,y); 
+     fill(128,128,255);
+      text(c,coord.x,coord.y); 
    }
    void update(int millis,PImage bg, int threshold) {
      println(millis);
-     while(isHit(bg,threshold)) {
-       y--;
+     if(isHit(bg,threshold)) {
+       coord.y = freePixel();
      }
-     y += millis * speed / 1000;
+     //y += millis * speed / 1000;
+   }
+   int freePixel(PImage bg, int threshold) {
+     
    }
    boolean isHit(PImage bg,int threshold) {
-     int w = bg.width;
      color[] ps = bg.pixels;
-     int index = w*floor(y) + floor(x);
-     if(index < ps.length && index > 0) {
-       return brightness(ps[index]) < threshold; 
-     } 
-     return false;
+     int charWidth = ceil(textWidth(c));
+     boolean result = false;
+     ScreenCoord scoord = coord.toScreenCoord();
+     
+     for(int y=0; y < TEXT_HEIGHT; y++) {
+        for(int x = 0; x < charWidth;x++) {
+          if(scoord.isVisible()) {
+            int index = scoord.toPixel();
+             result = result || brightness(ps[index]) < threshold; 
+          }
+           scoord.x++;
+         }
+         scoord.y--;
+     }
+
+
+     return result;
    }
 }
 
