@@ -39,8 +39,33 @@ class Manager {
        threshold = max(threshold - adjustment,0);
    }
    void process(PImage img) {
+     img.loadPixels();
      if(thresholdView) {
        paintThreshold(img,threshold);
+     } else {
+       desaturate(img);
+     }
+      flip(img);
+      img.updatePixels();
+   }
+   void desaturate(PImage img) {
+     int dimension = img.width * img.height;
+     colorMode(HSB);
+      for (int i = 0; i < dimension; i += 1) {
+        color c = img.pixels[i];
+        img.pixels[i] = color(0, 0, brightness(c)); 
+      } 
+      colorMode(RGB);
+   }
+   void flip(PImage img) {
+     int x;
+     int y;
+     for(y = 0; y < height; y++) {
+       for(x = 0; x < width/2; x++) {
+         color temp = img.pixels[toPixel(x,y)];
+         img.pixels[toPixel(x,y)] = img.pixels[toPixel(width - x-1,y)];
+         img.pixels[toPixel(width - x-1,y)] = temp;
+       }
      }
    }
 }
@@ -69,6 +94,9 @@ class ScreenCoord {
   int toPixel() {
     return floor(y)*width + floor(x);
   }
+}
+int toPixel(int x, int y) {
+    return y*width + x;
 }
 class WorldCoord {
   float x,y;
@@ -177,11 +205,13 @@ void draw() {
   int time = clock.tick();
 
   m.process(inputImage);
-  c.update(time,inputImage,m.threshold);
   set(0, 0, inputImage);
+
+
+  c.update(time,inputImage,m.threshold);
   
-  //int threshold = 128;
   
+   
   c.render();
 
 
@@ -199,7 +229,6 @@ void paintThreshold(PImage img,int threshold) {
     }
 
   } 
-  img.updatePixels();
 }
 
 void keyPressed() {
