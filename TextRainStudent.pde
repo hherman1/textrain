@@ -58,8 +58,8 @@ class Manager {
       colorMode(RGB);
    }
    void flip(PImage img) {
-     int x;
-     int y;
+     int x = 0;
+     int y = 0;
      for(y = 0; y < height; y++) {
        for(x = 0; x < width/2; x++) {
          color temp = img.pixels[toPixel(x,y)];
@@ -191,10 +191,13 @@ void draw() {
   if ((cam != null) && (cam.available())) {
     cam.read();
     inputImage.copy(cam, 0,0,cam.width,cam.height, 0,0,inputImage.width,inputImage.height);
+    m.process(inputImage);
+
   }
   else if ((mov != null) && (mov.available())) {
     mov.read();
     inputImage.copy(mov, 0,0,mov.width,mov.height, 0,0,inputImage.width,inputImage.height);
+    m.process(inputImage);
   }
 
 
@@ -204,7 +207,7 @@ void draw() {
   
   int time = clock.tick();
 
-  m.process(inputImage);
+  
   set(0, 0, inputImage);
 
 
