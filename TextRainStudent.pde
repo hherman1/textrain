@@ -67,7 +67,7 @@ class ScreenCoord {
       && y < height && y >= 0;
   }
   int toPixel() {
-    return floor(y)*height + floor(x);
+    return floor(y)*width + floor(x);
   }
 }
 class WorldCoord {
@@ -86,33 +86,34 @@ class WorldCoord {
 
 class Character {
    public static final int TEXT_HEIGHT = 20;
-   public static final float ESCAPE_VEL = .001;
+   public static final float ESCAPE_VEL = 1; // pixel per jump
    WorldCoord coord;
-   float speed = 20; // pixels per second
+   float speed = 40; // pixels per second
    char c;
    Character(char c, float x,float y) {
-     this.c = c;
+     this.c = c; //<>//
      this.coord = new WorldCoord(x,y);
+     println(coord.toScreenCoord().x,coord.toScreenCoord().y);
    }
    void render() {
      fill(128,128,255);
-      text(c,coord.x,coord.y); 
+     ScreenCoord sc = coord.toScreenCoord();
+      text(c,sc.x,sc.y); 
    }
    void update(int millis,PImage bg, int threshold) {
-     println(millis);
-     if(isHit(bg,threshold)) {
-       coord.y = freePixel();
+     while(isHit(bg,threshold)) { //<>//
+       coord.y -= ESCAPE_VEL/height;
      }
-     //y += millis * speed / 1000;
-   }
-   int freePixel(PImage bg, int threshold) {
-     
-   }
+     coord.y += speed* millis / (1000 * height);
+    }
    boolean isHit(PImage bg,int threshold) {
      color[] ps = bg.pixels;
      int charWidth = ceil(textWidth(c));
      boolean result = false;
      ScreenCoord scoord = coord.toScreenCoord();
+     scoord.x = floor(scoord.x);
+     scoord.y = floor(scoord.y);
+     float startX = scoord.x;
      
      for(int y=0; y < TEXT_HEIGHT; y++) {
         for(int x = 0; x < charWidth;x++) {
@@ -122,6 +123,7 @@ class Character {
           }
            scoord.x++;
          }
+         scoord.x = startX;
          scoord.y--;
      }
 
@@ -135,7 +137,7 @@ Manager m = new Manager();
 Clock clock = new Clock();
 
 
-  Character c = new Character('H',width/2,height/2);
+  Character c = new Character('H',0.5,0);
 
 void draw() {
   // When the program first starts, draw a menu of different options for which camera to use for input
