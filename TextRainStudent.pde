@@ -4,6 +4,10 @@
 
 
 import processing.video.*;
+import java.util.ArrayList;
+import java.util.Random;
+import java.util.Collections;
+import java.util.*;
 
 // Global variables for handling video data and the input selection screen
 String[] cameras;
@@ -15,21 +19,40 @@ int floor(double d) {
   return (int) Math.floor(d);
 }
 
+
+int g = 0;
+
+Manager m;
+Clock clock;
+int time;
+
+int x;
+String text1;
+
+
 void setup() {
   size(1280, 720);  
   inputImage = createImage(width, height, RGB);
   PFont font = loadFont("ArialMT-24.vlw");
   textFont(font,24);
+  
+  m = new Manager();
+  clock = new Clock();
+  time = clock.tick();
+  
+  x = 0;
+  text1 = "";
+  
 }
 
-class Manager {
+class ViewManager {
    int threshold = 128;
    int adjustment = 15;
    boolean thresholdView = true;
-   Manager() {
-     
-   }
-   void toggleThresholdView() {
+   
+   ViewManager(){}
+   
+    void toggleThresholdView() {
      thresholdView = !thresholdView;
    }
    void increment() {
@@ -69,6 +92,49 @@ class Manager {
      }
    }
 }
+class Manager {
+  
+   ViewManager vm = new ViewManager();
+   ScreenCharManager scm = new ScreenCharManager();
+   
+   boolean firstRender = true;
+  
+   Manager() {
+     
+   }
+   public void onKeyUp() {
+     vm.increment();
+   }
+   public void onKeyDown() {
+     vm.decrement();
+   }
+   public void onKeySpace() {
+     vm.toggleThresholdView();
+   }
+   public void process(PImage img) {
+     vm.process(img);
+   }
+   public void onRender() {
+     if(firstRender) {
+       firstRender = false;
+       onFirstRender();
+     }
+   }
+   protected void onFirstRender() {
+     
+   }
+   public int getThreshold() {
+     return vm.threshold;
+   }
+    void update(int millis,PImage bg) {
+      scm.update(millis,bg,vm.threshold);
+    }
+    void render() {
+      scm.render();
+    }
+   
+
+}
 
 class Clock {
   int currentTick = 0;
@@ -94,6 +160,9 @@ class ScreenCoord {
   int toPixel() {
     return floor(y)*width + floor(x);
   }
+  WorldCoord toWorldCoord() {
+    return new WorldCoord(x/width,y/height);
+  }
 }
 int toPixel(int x, int y) {
     return y*width + x;
@@ -112,33 +181,46 @@ class WorldCoord {
 
 
 
-class Character {
+class ScreenCharacter {
    public static final int TEXT_HEIGHT = 20;
    public static final float ESCAPE_VEL = 1; // pixel per jump
-   WorldCoord coord;
-   float speed = 40; // pixels per second
+   public final color COLOR = color(85,0,255);
+   
+   color charColor;
    char c;
-   Character(char c, float x,float y) {
-     this.c = c; //<>//
-     this.coord = new WorldCoord(x,y);
-     println(coord.toScreenCoord().x,coord.toScreenCoord().y);
+   float speed; // pixels per second
+   ScreenCoord coord;
+   public int lifetime; // milliseconds;
+
+   int life = 0;
+
+   ScreenCharacter(char c, WorldCoord coord,float speed, int lifetime,color _charColor) { //<>//
+     this(c, coord.toScreenCoord(),speed,lifetime,_charColor);
+   }
+   ScreenCharacter(char c, ScreenCoord coord,float speed, int lifetime,color _charColor) {
+     this.c = c;
+     this.coord = coord;
+     this.speed = speed;
+     this.lifetime = lifetime;
+     this.charColor = _charColor;
    }
    void render() {
-     fill(128,128,255);
-     ScreenCoord sc = coord.toScreenCoord();
-      text(c,sc.x,sc.y); 
+     float alpha = 255 * (1 - ((float)life)/lifetime);
+     fill(charColor,alpha);
+      text(c,coord.x,coord.y); 
    }
    void update(int millis,PImage bg, int threshold) {
+     life += millis;
      while(isHit(bg,threshold)) { //<>//
-       coord.y -= ESCAPE_VEL/height;
+       coord.y -= ESCAPE_VEL;
      }
-     coord.y += speed* millis / (1000 * height);
+     coord.y += speed* millis / 1000;
     }
    boolean isHit(PImage bg,int threshold) {
      color[] ps = bg.pixels;
      int charWidth = ceil(textWidth(c));
      boolean result = false;
-     ScreenCoord scoord = coord.toScreenCoord();
+     ScreenCoord scoord = new ScreenCoord(coord.x,coord.y);
      scoord.x = floor(scoord.x);
      scoord.y = floor(scoord.y);
      float startX = scoord.x;
@@ -154,20 +236,131 @@ class Character {
          scoord.x = startX;
          scoord.y--;
      }
-
-
+     
      return result;
+   }
+   boolean isDead() {
+     return (life > lifetime) || (coord.x > width || coord.y > height);
    }
 }
 
 
-Manager m = new Manager();
-Clock clock = new Clock();
 
+//void charGenerator(char h, float x, float y) {
+//  charList.add(new ScreenCharacter(h,x,y));
+//}
+  
+ArrayList<String> genWords() {
+    ArrayList<String> generatedWords = new ArrayList<String>();
+      //EXTRACTING WORDS FROM A TEXT FILE
+  String lines[] = loadStrings("text.txt");
+  for (int x = 0; x < lines.length - 1; x ++) {
+    text1 += lines[x];
+  }
+  //String st = text1.replaceAll("\\s+",""); 
+  String result = text1.replaceAll("[^\\p{L}\\p{Z}]","");
+  //split using space
+  String[] splited = result.split("\\s+");
+  //add to generatedWords list
+  for (String words : splited) {
+    generatedWords.add(words);
+    
+  }
+  return generatedWords;
+}
+class ScreenCharManager {
+  public final int CAPACITY = 600;
+  ArrayList<ScreenCharacter> screenChars = new ArrayList(CAPACITY);
+  ScreenCharGenerator scg = new ScreenCharGenerator();
+  ScreenCharManager() {
+    
+  }
+   void update(int millis,PImage bg, int threshold) {
+    for(ScreenCharacter sc: screenChars) {
+      sc.update(millis,bg,threshold);
+    }
+    screenChars = cleanDead(screenChars);
+    while(screenChars.size() < CAPACITY) {
+       screenChars.addAll(scg.generate());
+     }
+  }
+  void render() {
+    for(ScreenCharacter sc: screenChars) {
+      sc.render();
+    }
+  }
+}
+class ScreenCharGenerator {
+  protected ArrayList<String> generatedWords = genWords();
+  public final char[] alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz".toCharArray();
+  
+  protected Random randomGenerator = new Random();
+  
+  public static final float WORD_CHANCE = 0.2;
+  
+  public static final float BASE_SPEED = 10;
+  public static final int BASE_LIFETIME = 10000;
+  public static final float Y_VARIANCE = 10; // pixels
+  public static final float X_VARIANCE = 0; // pixels
+  public static final float SPEED_VARIANCE_CHAR = 30; // pixels per second
+  public static final float SPEED_VARIANCE_WORD = 0; // pixels per second
+  public static final float LIFETIME_VARIANCE = 40000; // millis
+  
+  public ScreenCharGenerator() {
+    
+  }
+  public ArrayList<ScreenCharacter> generate() {
+    if(Math.random() < WORD_CHANCE) {
+      return genWord();
+    } else {
+      ArrayList<ScreenCharacter> result = new ArrayList();
+      result.add(genChar());
+      return result;
+    }
+  }
+  protected float yRange() {
+    return -2 * height;
+  }
+  protected ArrayList<ScreenCharacter> genWord() {
+    String word = generatedWords.get(randomGenerator.nextInt(generatedWords.size()));
+    ArrayList<ScreenCharacter> out = new ArrayList(word.length());
+    
+    float x = randomGenerator.nextFloat() * width;
+    float y = yRange() * randomGenerator.nextFloat();
+    float speed = 10 + randomGenerator.nextFloat() * SPEED_VARIANCE_CHAR;
+    int lifetime = ceil(10000 + randomGenerator.nextFloat() * LIFETIME_VARIANCE);
 
-  Character c = new Character('H',0.5,0);
+    
+    for(char c : word.toCharArray()) {
+      float xx = randomGenerator.nextFloat() * X_VARIANCE + x;
+      float yy = randomGenerator.nextFloat() * Y_VARIANCE + y;
+      out.add(new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime));
+      x += textWidth(c);
+    }
+    
+    return out;
+  }
+  protected ScreenCharacter genChar() {
+    char c = alphabet[randomGenerator.nextInt(alphabet.length)];
+    float x = randomGenerator.nextFloat() * width;
+    float y = yRange()* randomGenerator.nextFloat();
+    return makeChar(c,x,y); 
 
+  }
+  protected ScreenCharacter makeChar(char c, float x, float y) {
+    float xx = randomGenerator.nextFloat() * X_VARIANCE + x;
+    float yy = randomGenerator.nextFloat() * Y_VARIANCE + y;
+    float speed = BASE_SPEED + randomGenerator.nextFloat() * SPEED_VARIANCE_CHAR;
+    int lifetime = ceil(BASE_LIFETIME + randomGenerator.nextFloat() * LIFETIME_VARIANCE);
+    return new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime); 
+  }
+}
+  
+
+  
 void draw() {
+ 
+  
   // When the program first starts, draw a menu of different options for which camera to use for input
   // The input method is selected by pressing a key 0-9 on the keyboard
   if (!inputMethodSelected) {
@@ -184,8 +377,6 @@ void draw() {
 
 
   // This part of the draw loop gets called after the input selection screen, during normal execution of the program.
-
-  
   // STEP 1.  Load an image, either from a movie file or from a live camera feed. Store the result in the inputImage variable
   
   if ((cam != null) && (cam.available())) {
@@ -200,26 +391,31 @@ void draw() {
     m.process(inputImage);
   }
 
-
   // Fill in your code to implement the rest of TextRain here..
 
   // Tip: This code draws the current input image to the screen
   
-  int time = clock.tick();
-
+  m.update(time,inputImage);
   
   set(0, 0, inputImage);
+  m.render();
 
-
-  c.update(time,inputImage,m.threshold);
+  //charGenerate(charactersList.get(g));
   
-  
-   
-  c.render();
-
-
 
 }
+
+ArrayList<ScreenCharacter> cleanDead(ArrayList<ScreenCharacter> chars) {
+  ArrayList<ScreenCharacter> out = new ArrayList(chars.size());
+  for(ScreenCharacter c : chars) {
+    if(!c.isDead()) {
+      out.add(c);
+    }
+  }
+  return out;
+}
+
+  
 
 void paintThreshold(PImage img,int threshold) {
   int dimension = img.width * img.height;
@@ -264,14 +460,14 @@ void keyPressed() {
   
   if (key == CODED) {
     if (keyCode == UP) {
-      m.increment();
+      m.onKeyUp();
     }
     else if (keyCode == DOWN) {
-      m.decrement();
+      m.onKeyDown();
     } 
   }
   else if (key == ' ') {
-    m.toggleThresholdView();
+    m.onKeySpace();
   } 
   
 }
