@@ -126,7 +126,7 @@ class ScreenCharacter {
    public static final int TEXT_HEIGHT = 20;
    public static final float ESCAPE_VEL = 1; // pixel per jump
    WorldCoord coord;
-   float speed = 590; // pixels per second
+   float speed = 570; // pixels per second
    char c;
    ScreenCharacter(char c, float x,float y) {
      this.c = c; //<>//
@@ -263,11 +263,11 @@ ArrayList<ScreenCharacter> listMaker() {
     //println(width);
     
     List<Float> list = new ArrayList<Float>();
-    list.add(0.00);
-    list.add(-0.02);
-    list.add(-0.04);
-    list.add(-0.05);
-    Float random = list.get(new Random().nextInt(list.size()));
+    list.add(-.02);
+    list.add(-0.10);
+    list.add(-0.24);
+    list.add(-0.06);
+    //Float random;
     
    
    //println("PRINT VALUE IS " + random);
@@ -283,17 +283,17 @@ ArrayList<ScreenCharacter> listMaker() {
         
         //println(widthTracker);
         widthTracker = widthTracker + (textWidth(s.charAt(i)) + 0.02);
-        random = list.get(new Random().nextInt(list.size()));
+        //random = list.get(new Random().nextInt(list.size()));
         //println("PRINT VALUE IS " + random);
-        charList.add(new ScreenCharacter(s.charAt(i),xCoordinate,random));
+        charList.add(new ScreenCharacter(s.charAt(i),xCoordinate,yCoordinate + list.get(new Random().nextInt(list.size()))));
         xCoordinate+=0.02;
       }
       
       else if(widthTracker >= 700) {
         widthTracker = 0;
         xCoordinate = 0.00;
-        println("PRINT VALUE IS " + random);
-        random -= 0.09;
+        //println("PRINT VALUE IS " + random);
+        yCoordinate -= (0.19 + list.get(new Random().nextInt(list.size()))) ;
       }
      
 
