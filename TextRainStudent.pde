@@ -48,7 +48,7 @@ void setup() {
 class ViewManager {
    int threshold = 128;
    int adjustment = 15;
-   boolean thresholdView = true;
+   boolean thresholdView = false;
    
    ViewManager(){}
    
@@ -204,17 +204,17 @@ class ScreenCharacter {
      this.lifetime = lifetime;
      this.charColor = _charColor;
    }
-   void render() {
-     float alpha = 255 * (1 - ((float)life)/lifetime);
-     fill(charColor,alpha);
-      text(c,coord.x,coord.y); 
-   }
    void update(int millis,PImage bg, int threshold) {
      life += millis;
      while(isHit(bg,threshold)) { //<>//
        coord.y -= ESCAPE_VEL;
      }
      coord.y += speed* millis / 1000;
+    }
+    void renderCharacter() {
+     float alpha = 255 * (1 - ((float)life)/lifetime);
+     fill(charColor,alpha);
+      text(c,coord.x,coord.y); 
     }
    boolean isHit(PImage bg,int threshold) {
      color[] ps = bg.pixels;
@@ -269,7 +269,7 @@ ArrayList<String> genWords() {
   return generatedWords;
 }
 class ScreenCharManager {
-  public final int CAPACITY = 600;
+  public final int CAPACITY = 1000;
   ArrayList<ScreenCharacter> screenChars = new ArrayList(CAPACITY);
   ScreenCharGenerator scg = new ScreenCharGenerator();
   ScreenCharManager() {
@@ -286,7 +286,7 @@ class ScreenCharManager {
   }
   void render() {
     for(ScreenCharacter sc: screenChars) {
-      sc.render();
+      sc.renderCharacter();
     }
   }
 }
@@ -298,13 +298,17 @@ class ScreenCharGenerator {
   
   public static final float WORD_CHANCE = 0.2;
   
-  public static final float BASE_SPEED = 10;
-  public static final int BASE_LIFETIME = 10000;
   public static final float Y_VARIANCE = 10; // pixels
   public static final float X_VARIANCE = 0; // pixels
-  public static final float SPEED_VARIANCE_CHAR = 30; // pixels per second
-  public static final float SPEED_VARIANCE_WORD = 0; // pixels per second
+  
+  public static final float BASE_SPEED = 10;
+  public static final float SPEED_VARIANCE = 20; // pixels per second
+  
+  public static final int BASE_LIFETIME = 40000;
   public static final float LIFETIME_VARIANCE = 40000; // millis
+  
+  public final color COLOR_A = color(0,0,128);
+  public final color COLOR_B = color(0,0,255);
   
   public ScreenCharGenerator() {
     
@@ -318,6 +322,9 @@ class ScreenCharGenerator {
       return result;
     }
   }
+  protected color pickColor() {
+    return lerpColor(COLOR_A,COLOR_B,randomGenerator.nextFloat());
+  }
   protected float yRange() {
     return -2 * height;
   }
@@ -327,14 +334,15 @@ class ScreenCharGenerator {
     
     float x = randomGenerator.nextFloat() * width;
     float y = yRange() * randomGenerator.nextFloat();
-    float speed = 10 + randomGenerator.nextFloat() * SPEED_VARIANCE_CHAR;
+    float speed = 10 + randomGenerator.nextFloat() * SPEED_VARIANCE;
     int lifetime = ceil(10000 + randomGenerator.nextFloat() * LIFETIME_VARIANCE);
+    color charColor = pickColor();
 
     
     for(char c : word.toCharArray()) {
       float xx = randomGenerator.nextFloat() * X_VARIANCE + x;
       float yy = randomGenerator.nextFloat() * Y_VARIANCE + y;
-      out.add(new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime));
+      out.add(new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime,charColor));
       x += textWidth(c);
     }
     
@@ -344,16 +352,14 @@ class ScreenCharGenerator {
     char c = alphabet[randomGenerator.nextInt(alphabet.length)];
     float x = randomGenerator.nextFloat() * width;
     float y = yRange()* randomGenerator.nextFloat();
-    return makeChar(c,x,y); 
-
-  }
-  protected ScreenCharacter makeChar(char c, float x, float y) {
     float xx = randomGenerator.nextFloat() * X_VARIANCE + x;
     float yy = randomGenerator.nextFloat() * Y_VARIANCE + y;
-    float speed = BASE_SPEED + randomGenerator.nextFloat() * SPEED_VARIANCE_CHAR;
+    float speed = BASE_SPEED + randomGenerator.nextFloat() * SPEED_VARIANCE;
     int lifetime = ceil(BASE_LIFETIME + randomGenerator.nextFloat() * LIFETIME_VARIANCE);
-    return new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime); 
+    color charColor = pickColor();
+    return new ScreenCharacter(c,new ScreenCoord(xx,yy),speed,lifetime,charColor); 
   }
+
 }
   
 
