@@ -1,5 +1,4 @@
 # textrain
-
 ### Hunter Herman & Ali Mahad
 
 The code is very straightforward. We have classes to manage image processing and global state as well as separate classes for falling characters, managing the characters, and generating them. 
